@@ -3,6 +3,7 @@
 A serverless website monitoring solution built on AWS and managed via Terraform. It checks the health of a specified website every 5 minutes and sends an email alert if the website goes down. It also logs every check to a DynamoDB table for historical analysis.
 
 ## Architecture
+<img width="991" height="591" alt="Biểu đồ không có tiêu đề drawio" src="https://github.com/user-attachments/assets/51cc33f0-5215-4667-b173-beff8de76f3f" />
 
 - **AWS EventBridge (CloudWatch Events):** Triggers the monitoring function on a 5-minute schedule.
 - **AWS Lambda (Python 3.12):** Executes the health check against the target URL.
@@ -58,7 +59,6 @@ A serverless website monitoring solution built on AWS and managed via Terraform.
   ```
 - To change the frequency of checks, modify the `schedule_expression` in the EventBridge resource inside `main.tf`.
 
-<img width="991" height="591" alt="Biểu đồ không có tiêu đề drawio" src="https://github.com/user-attachments/assets/51cc33f0-5215-4667-b173-beff8de76f3f" />
 
 
 ## Cleanup
