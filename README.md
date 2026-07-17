@@ -58,6 +58,9 @@ A serverless website monitoring solution built on AWS and managed via Terraform.
   ```
 - To change the frequency of checks, modify the `schedule_expression` in the EventBridge resource inside `main.tf`.
 
+<img width="991" height="591" alt="Biểu đồ không có tiêu đề drawio" src="https://github.com/user-attachments/assets/51cc33f0-5215-4667-b173-beff8de76f3f" />
+
+
 ## Cleanup
 
 To avoid ongoing AWS charges, you can destroy all deployed resources by running:
