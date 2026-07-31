@@ -1,69 +1,76 @@
-# AWS Website Monitor
+# AWS Uptime Monitor Dashboard
 
-A serverless website monitoring solution built on AWS and managed via Terraform. It checks the health of a specified website every 5 minutes and sends an email alert if the website goes down. It also logs every check to a DynamoDB table for historical analysis.
+A complete Serverless Fullstack application built on AWS and managed via Terraform. 
+It monitors a list of websites every 5 minutes, logs results to DynamoDB, alerts via Email (SNS) when a site goes down, and provides a Frontend Dashboard to visualize the uptime data via an API Gateway.
 
 ## Architecture
 <img width="991" height="591" alt="Biểu đồ không có tiêu đề drawio" src="https://github.com/user-attachments/assets/51cc33f0-5215-4667-b173-beff8de76f3f" />
 
-- **AWS EventBridge (CloudWatch Events):** Triggers the monitoring function on a 5-minute schedule.
-- **AWS Lambda (Python 3.12):** Executes the health check against the target URL.
-- **Amazon DynamoDB:** Stores the logs of each check, including timestamp, response time, and HTTP status code.
-- **Amazon SNS:** Sends an email notification to the configured address if the website fails the health check.
+1. **Backend (Monitoring)**:
+   - **AWS EventBridge**: Triggers the monitoring function every 5 minutes.
+   - **AWS Lambda (Python)**: Pings a list of URLs and checks their HTTP status code.
+   - **Amazon DynamoDB**: Stores timestamp, response time, and status of each check.
+   - **Amazon SNS**: Sends email alerts if a website fails the health check.
+
+2. **Frontend (Dashboard)**:
+   - **AWS API Gateway**: Exposes a public REST API endpoint.
+   - **AWS Lambda (API Fetcher)**: Reads data from DynamoDB and returns it as JSON for the API.
+   - **Static Dashboard**: A simple HTML/JS page that queries the API Gateway and displays the status and response times of all monitored websites.
 
 ## Prerequisites
 
 - [Terraform](https://developer.hashicorp.com/terraform/downloads) installed
-- [AWS CLI](https://aws.amazon.com/cli/) installed and configured with your AWS credentials
-- Python 3.12 (for modifying Lambda if necessary)
+- [AWS CLI](https://aws.amazon.com/cli/) configured with your AWS credentials
+- Python 3.12 (if you wish to modify the Lambda functions locally)
 
 ## Setup & Deployment
 
-1. **Clone the repository** (if you haven't already):
-   ```bash
-   git clone https://github.com/ThongNguyen1510/aws-web-monitor-project.git
-   cd aws-web-monitor-project
-   ```
-
-2. **Configure your Variables**:
+1. **Configure your Variables**:
    Create a file named `terraform.tfvars` in the root directory and add your alert email:
    ```hcl
    alert_email = "your-email@example.com"
    ```
-   *(Note: This file is ignored by git to keep your personal email private).*
 
-3. **Initialize Terraform**:
-   This command downloads the required AWS provider plugins.
+2. **Initialize Terraform**:
    ```bash
    terraform init
    ```
 
-4. **Review the Deployment Plan**:
-   ```bash
-   terraform plan
-   ```
-
-5. **Deploy the Infrastructure**:
+3. **Deploy the Infrastructure**:
    ```bash
    terraform apply
    ```
-   *Type `yes` when prompted to create the resources.*
+   *Type `yes` when prompted. After it finishes, Terraform will output an `api_url` in the terminal. Copy this URL!*
 
-6. **Confirm SNS Subscription**:
-   After deployment, AWS SNS will send an email to the address you provided in `terraform.tfvars`. **You must click the confirmation link in that email** to start receiving alerts.
+4. **Confirm SNS Subscription**:
+   Check your email inbox (the one you provided in step 1). AWS SNS will send a confirmation link. You must click it to receive downtime alerts.
+
+## Viewing the Dashboard
+
+1. Go to the `frontend` folder and double-click `index.html` to open it in your web browser.
+2. Paste the `api_url` you got from Step 3 into the input box and click **Load Data**.
+3. You will now see the live status of all monitored websites!
 
 ## Customization
 
-- To monitor a different URL, you can change the `target_url` variable in `main.tf` or override it in your `terraform.tfvars`:
-  ```hcl
-  target_url = "https://your-website.com"
-  ```
-- To change the frequency of checks, modify the `schedule_expression` in the EventBridge resource inside `main.tf`.
+To monitor different URLs, update the `target_urls` list inside `main.tf`:
+```hcl
+variable "target_urls" {
+  type = list(string)
+  default = [
+    "https://www.google.com",
+    "https://httpstat.us/200", 
+    "https://httpstat.us/503" # Used to demo a failing website
+  ]
+}
+```
+Run `terraform apply` again after changing the list.
 
 
 
 ## Cleanup
 
-To avoid ongoing AWS charges, you can destroy all deployed resources by running:
+To destroy all resources and stop AWS billing:
 ```bash
 terraform destroy
 ```

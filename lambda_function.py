@@ -3,24 +3,27 @@ import urllib.error
 import boto3
 import time
 import os
+import json
 from datetime import datetime
 
 DYNAMODB_TABLE = os.environ['DYNAMODB_TABLE']
 SNS_TOPIC_ARN = os.environ['SNS_TOPIC_ARN']
-TARGET_URL = os.environ['TARGET_URL']
+TARGET_URLS = json.loads(os.environ['TARGET_URLS'])
 
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(DYNAMODB_TABLE)
 sns = boto3.client('sns')
 
-def lambda_handler(event, context):
+def check_url(url):
     timestamp = datetime.utcnow().isoformat()
     status_code = 0
     is_up = False
-    
     start_time = time.time()
+    
     try:
-        req = urllib.request.Request(TARGET_URL, method='GET')
+        req = urllib.request.Request(url, method='GET')
+        # Thêm header User-Agent để tránh bị block bởi một số server
+        req.add_header('User-Agent', 'AWS-Monitor/1.0')
         with urllib.request.urlopen(req, timeout=5) as response:
             status_code = response.getcode()
             is_up = (status_code == 200)
@@ -34,7 +37,7 @@ def lambda_handler(event, context):
     # Ghi vào DynamoDB
     table.put_item(
         Item={
-            'url': TARGET_URL,
+            'url': url,
             'timestamp': timestamp,
             'status_code': status_code,
             'response_time_ms': response_time_ms,
@@ -44,11 +47,20 @@ def lambda_handler(event, context):
     
     # Gửi cảnh báo
     if not is_up:
-        message = f"CẢNH BÁO: Website {TARGET_URL} đang gặp sự cố!\nThời gian: {timestamp}\nStatus Code: {status_code}\nResponse Time: {response_time_ms} ms."
+        message = f"CẢNH BÁO: Website {url} đang gặp sự cố!\nThời gian: {timestamp}\nStatus Code: {status_code}\nResponse Time: {response_time_ms} ms."
         sns.publish(
             TopicArn=SNS_TOPIC_ARN,
-            Subject=f"ALERT: Website Down ({TARGET_URL})",
+            Subject=f"ALERT: Website Down ({url})",
             Message=message
         )
+    return is_up
+
+def lambda_handler(event, context):
+    results = {}
+    for url in TARGET_URLS:
+        results[url] = check_url(url)
         
-    return {'statusCode': 200, 'body': f'Checked {TARGET_URL} - Status: {status_code}'}
+    return {
+        'statusCode': 200,
+        'body': json.dumps({'message': 'Checks completed', 'results': results})
+    }

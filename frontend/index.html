@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Website Monitor Dashboard</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
+        h1 { text-align: center; color: #333; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .status-up { color: #28a745; font-weight: bold; }
+        .status-down { color: #dc3545; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #f8f9fa; }
+        .config-section { background: #e9ecef; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        input[type="text"] { width: 80%; padding: 8px; }
+        button { padding: 8px 15px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 AWS Uptime Monitor Dashboard</h1>
+        
+        <div class="config-section">
+            <p><strong>Setup:</strong> After running <code>terraform apply</code>, paste your API Gateway URL here:</p>
+            <input type="text" id="apiUrl" placeholder="https://xxxxxx.execute-api.ap-southeast-2.amazonaws.com/prod/status">
+            <button onclick="fetchData()">Load Data</button>
+        </div>
+
+        <div id="dashboard" style="display:none;">
+            <div class="card">
+                <h2>Current Status</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Website URL</th>
+                            <th>Status</th>
+                            <th>Status Code</th>
+                            <th>Response Time (ms)</th>
+                            <th>Last Checked</th>
+                        </tr>
+                    </thead>
+                    <tbody id="statusTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Try to load saved API URL from localStorage
+        window.onload = () => {
+            const savedUrl = localStorage.getItem('monitorApiUrl');
+            if (savedUrl) {
+                document.getElementById('apiUrl').value = savedUrl;
+                fetchData();
+            }
+        };
+
+        async function fetchData() {
+            const apiUrl = document.getElementById('apiUrl').value.trim();
+            if (!apiUrl) return alert("Please enter the API URL first!");
+            
+            localStorage.setItem('monitorApiUrl', apiUrl); // Save for next time
+            
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error("Network response was not ok");
+                
+                const data = await response.json();
+                renderDashboard(data.latest);
+                document.getElementById('dashboard').style.display = 'block';
+            } catch (error) {
+                alert("Error fetching data: " + error.message);
+            }
+        }
+
+        function renderDashboard(latestData) {
+            const tbody = document.getElementById('statusTableBody');
+            tbody.innerHTML = '';
+            
+            latestData.forEach(item => {
+                const statusClass = item.is_up ? 'status-up' : 'status-down';
+                const statusText = item.is_up ? '✅ UP' : '❌ DOWN';
+                const date = new Date(item.timestamp).toLocaleString();
+                
+                const row = `<tr>
+                    <td><a href="${item.url}" target="_blank">${item.url}</a></td>
+                    <td class="${statusClass}">${statusText}</td>
+                    <td>${item.status_code}</td>
+                    <td>${item.response_time_ms} ms</td>
+                    <td>${date}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+    </script>
+</body>
+</html>
